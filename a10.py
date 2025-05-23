@@ -111,6 +111,55 @@ def get_birth_date(name: str) -> str:
 
     return match.group("birth")
 
+def get_address(school_name: str) -> str:
+    """Gets address of the given school
+
+    Args:
+        school_name - name of the school to get address of
+
+    Returns:
+        address of the given school
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(school_name)))
+    pattern = r"(?:Address\s*:?\s*)(?P<address>[\d\w\s\.,]+?)(?=\s*(?:Street|Coordinates)|$)"
+    error_text = "Page infobox has no address information"
+    match_obj = get_match(infobox_text, pattern, error_text)
+
+    return match_obj.group("address")
+
+def get_elevation(airport_name: str) -> str:
+    """Gets elevation of the given airport
+
+    Args:
+        airport_name - name of the airport to get elevation of
+
+    Returns:
+        elevation of the given airport
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(airport_name)))
+    pattern = r"(?:Elevation AMSL.*?)(?P<elevation>[\d,.]+)(?:.*?)ft"
+    error_text = "Page infobox has no elevation information"
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("elevation")
+
+def get_runway_length(airport_name: str, runway_name: str) -> str:
+    """Gets length of the given runway
+
+    Args:
+        airport_name - name of the airport to get runway length of
+        runway_name - name of the runway to get length of
+
+    Returns:
+        length of the given runway
+    """
+    infobox_text = clean_text(get_first_infobox_text(get_page_html(airport_name)))
+    pattern = rf"(?i){re.escape(runway_name)}\n(?P<length>[^\n]*)"
+    error_text = "Page infobox has no runway length information"
+    match = get_match(infobox_text, pattern, error_text)
+
+    return match.group("length")
+
 
 # below are a set of actions. Each takes a list argument and returns a list of answers
 # according to the action and the argument. It is important that each function returns a
@@ -140,6 +189,38 @@ def polar_radius(matches: List[str]) -> List[str]:
     """
     return [get_polar_radius(matches[0])]
 
+def address(matches: List[str]) -> List[str]:
+    """Returns address of school in matches
+
+    Args:
+        matches - match from pattern of school to find address of
+
+    Returns:
+        address of school
+    """
+    return [get_address(" ".join(matches))]
+
+def elevation(matches: List[str]) -> List[str]:
+    """Returns elevation of airport in matches
+
+    Args:
+        matches - match from pattern of airport to find elevation of
+
+    Returns:
+        elevation of airport
+    """
+    return [get_elevation(" ".join(matches)) + " ft"]
+
+def runway_length(matches: List[str]) -> List[str]:
+    """Returns length of runway in matches
+
+    Args:
+        matches - match from pattern of airport and runway to find length of
+
+    Returns:
+        length of runway
+    """
+    return [get_runway_length(matches[1], matches[0]) + " ft"]
 
 # dummy argument is ignored and doesn't matter
 def bye_action(dummy: List[str]) -> None:
@@ -156,6 +237,9 @@ Action = Callable[[List[str]], List[Any]]
 pa_list: List[Tuple[Pattern, Action]] = [
     ("when was % born".split(), birth_date),
     ("what is the polar radius of %".split(), polar_radius),
+    ("what is the address of %".split(), address),
+    ("what is the elevation of %".split(), elevation),
+    ("what is the length of runway _ at %".split(), runway_length),
     (["bye"], bye_action),
 ]
 
@@ -184,7 +268,7 @@ def search_pa_list(src: List[str]) -> List[str]:
 def query_loop() -> None:
     """The simple query loop. The try/except structure is to catch Ctrl-C or Ctrl-D
     characters and exit gracefully"""
-    print("Welcome to the movie database!\n")
+    print("Welcome to the wikipedia chatbot!\n")
     while True:
         try:
             print()
